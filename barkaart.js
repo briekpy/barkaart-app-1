@@ -1,3 +1,75 @@
+// Winkelmandje (shopping cart) logic
+let cart = JSON.parse(localStorage.getItem('barkaartCart') || '{}');
+
+function updateCartUI() {
+    const cartDiv = document.getElementById('cart');
+    const cartItemsDiv = document.getElementById('cartItems');
+    const cartTotalDiv = document.getElementById('cartTotal');
+    if (!cartDiv || !cartItemsDiv || !cartTotalDiv) return;
+    const items = Object.entries(cart);
+    if (items.length === 0) {
+        cartDiv.style.display = 'none';
+        return;
+    }
+    cartDiv.style.display = 'block';
+    let total = 0;
+    cartItemsDiv.innerHTML = '';
+    items.forEach(([name, obj]) => {
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.justifyContent = 'space-between';
+        row.style.alignItems = 'center';
+        row.innerHTML = `<span>${obj.qty}x ${name}</span><span>€${(obj.price * obj.qty).toFixed(2)}</span> <button class="remove-from-cart" data-item="${name}">-</button>`;
+        cartItemsDiv.appendChild(row);
+        total += obj.price * obj.qty;
+    });
+    cartTotalDiv.textContent = 'Totaal: €' + total.toFixed(2);
+}
+
+function addToCart(item, price) {
+    if (!cart[item]) cart[item] = { qty: 0, price: price };
+    cart[item].qty++;
+    localStorage.setItem('barkaartCart', JSON.stringify(cart));
+    updateCartUI();
+}
+
+function removeFromCart(item) {
+    if (cart[item]) {
+        cart[item].qty--;
+        if (cart[item].qty <= 0) delete cart[item];
+        localStorage.setItem('barkaartCart', JSON.stringify(cart));
+        updateCartUI();
+    }
+}
+
+function clearCart() {
+    cart = {};
+    localStorage.setItem('barkaartCart', JSON.stringify(cart));
+    updateCartUI();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    // ...existing code...
+    document.querySelectorAll('.add-to-cart').forEach(btn => {
+        btn.onclick = () => {
+            const item = btn.getAttribute('data-item');
+            const price = parseFloat(btn.getAttribute('data-price'));
+            addToCart(item, price);
+        };
+    });
+    const cartDiv = document.getElementById('cart');
+    if (cartDiv) {
+        cartDiv.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-from-cart')) {
+                const item = e.target.getAttribute('data-item');
+                removeFromCart(item);
+            }
+        });
+        const clearBtn = document.getElementById('clearCartBtn');
+        if (clearBtn) clearBtn.onclick = clearCart;
+    }
+    updateCartUI();
+});
 function getCode() {
     return localStorage.getItem('barkaartCode') || '0000';
 }
