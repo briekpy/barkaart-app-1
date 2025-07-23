@@ -85,6 +85,64 @@ function clearCart() {
 
 window.addEventListener('DOMContentLoaded', () => {
     // ...existing code...
+    // --- Brug-foto captcha ---
+    setupBridgeCaptcha();
+// --- Brug-foto captcha logica ---
+// Vul hieronder je Unsplash API-key in:
+const UNSPLASH_ACCESS_KEY = 'VUL_HIER_JE_API_KEY_IN';
+
+function setupBridgeCaptcha() {
+    const captchaDiv = document.getElementById('bridgeCaptcha');
+    const captchaMsg = document.getElementById('bridgeCaptchaMsg');
+    if (!captchaDiv || !captchaMsg) return;
+    loadBridgeCaptcha(captchaDiv, captchaMsg);
+}
+
+async function loadBridgeCaptcha(captchaDiv, captchaMsg) {
+    captchaDiv.innerHTML = 'Laden...';
+    captchaMsg.textContent = '';
+    // 1 brug-foto ophalen
+    const bridgeRes = await fetch(`https://api.unsplash.com/photos/random?query=bridge&count=1&client_id=${UNSPLASH_ACCESS_KEY}`);
+    const bridgeData = await bridgeRes.json();
+    // 8 random niet-brug-foto's ophalen
+    const randomRes = await fetch(`https://api.unsplash.com/photos/random?query=landscape&count=8&client_id=${UNSPLASH_ACCESS_KEY}`);
+    const randomData = await randomRes.json();
+    // Combineer en shuffle
+    let images = [
+        { url: bridgeData[0].urls.small, isBridge: true }
+    ];
+    randomData.forEach(img => images.push({ url: img.urls.small, isBridge: false }));
+    images = images.sort(() => Math.random() - 0.5);
+    // Render grid
+    captchaDiv.innerHTML = '';
+    images.forEach((img, idx) => {
+        const el = document.createElement('img');
+        el.src = img.url;
+        el.className = 'captcha-img';
+        el.style.width = '100px';
+        el.style.height = '100px';
+        el.style.objectFit = 'cover';
+        el.style.margin = '5px';
+        el.style.border = '3px solid transparent';
+        el.onclick = () => {
+            if (img.isBridge) {
+                el.style.border = '3px solid #00e676';
+                captchaMsg.textContent = 'Juist! Je bent geen robot.';
+                captchaMsg.style.color = '#00e676';
+                setTimeout(() => {
+                    captchaDiv.style.display = 'none';
+                    captchaMsg.textContent = '';
+                }, 1200);
+            } else {
+                el.style.border = '3px solid #d32f2f';
+                captchaMsg.textContent = 'Fout, probeer opnieuw!';
+                captchaMsg.style.color = '#d32f2f';
+                setTimeout(() => loadBridgeCaptcha(captchaDiv, captchaMsg), 1200);
+            }
+        };
+        captchaDiv.appendChild(el);
+    });
+}
     document.querySelectorAll('.add-to-cart').forEach(btn => {
         btn.onclick = () => {
             const item = btn.getAttribute('data-item');
@@ -93,6 +151,15 @@ window.addEventListener('DOMContentLoaded', () => {
         };
     });
     const cartDiv = document.getElementById('cart');
+    // --- Not a robot challenge ---
+    let a = Math.floor(Math.random()*10+1), b = Math.floor(Math.random()*10+1);
+    const challenge = `${a} + ${b} = ?`;
+    const notRobotChallenge = document.getElementById('notRobotChallenge');
+    const notRobotAnswer = document.getElementById('notRobotAnswer');
+    if (notRobotChallenge && notRobotAnswer) {
+        notRobotChallenge.textContent = 'Beantwoord: ' + challenge;
+        notRobotAnswer.value = '';
+    }
     if (cartDiv) {
         cartDiv.addEventListener('click', (e) => {
             if (e.target.classList.contains('remove-from-cart')) {
@@ -105,6 +172,13 @@ window.addEventListener('DOMContentLoaded', () => {
         const buyBtn = document.getElementById('buyCartBtn');
         if (buyBtn) buyBtn.onclick = () => {
             if (!cashierMode) return;
+            // Check 'I am not a robot' (math challenge)
+            const notRobotAnswer = document.getElementById('notRobotAnswer');
+            if (!notRobotAnswer || parseInt(notRobotAnswer.value, 10) !== (a + b)) {
+                showMessage('Los de anti-robot som op!', 2000, '#d32f2f');
+                if (notRobotAnswer) notRobotAnswer.focus();
+                return;
+            }
             // Calculate total
             let total = 0;
             Object.values(cart).forEach(obj => { total += obj.price * obj.qty; });

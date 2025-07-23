@@ -1,0 +1,17 @@
+{
+  "name": "Barkaart App",
+  "packageId": "be.toptitude.barkaart",
+  "host": "VUL-HIER-JE-DOMEIN-IN",
+  "startUrl": "/index.html",
+  "themeColor": "#00e676",
+  "navigationColor": "#00e676",
+  "backgroundColor": "#ffffff",
+  "display": "standalone",
+  "icon": "favicon.ico",
+  "maskableIcon": "favicon.ico",
+  "signing": {
+    "use": "new"
+  },
+  "shortcuts": [],
+  "generator": "bubblewrap"
+}

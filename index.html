@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#00e676">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Barkaart - Digital Bar Card</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.ico">
     <link rel="stylesheet" href="barkaart.css">
 </head>
 <body>
@@ -19,7 +22,18 @@
         </div>
         <div class="info">Waarde: <span id="totalValue">€5,00</span></div>
         <div style="text-align:center;margin:10px 0 10px 0;">
-            <a href="https://www.myinstants.com/nl/index/be/" target="_blank" id="cadeauBtn" style="background:#ffd600;color:#d50000;font-weight:bold;border:none;border-radius:6px;padding:7px 22px;cursor:pointer;box-shadow:0 1px 4px #bdbdbd;font-size:1.08em;text-decoration:none;display:inline-block;transition:background 0.2s;">🎁 Cadeau</a>
+            <a href="https://www.myinstants.com/nl/index/be/" target="_blank" id="cadeauBtn" style="background:#ffd600;color:#d50000;font-weight:bold;border:none;border-radius:6px;padding:7px 22px;cursor:pointer;box-shadow:0 1px 4px #bdbdbd;font-size:1.08em;text-decoration:none;display:inline-flex;align-items:center;gap:7px;transition:background 0.2s;">
+              <span style="display:inline-block;width:1.3em;height:1.3em;vertical-align:middle;">
+                <svg viewBox="0 0 32 32" width="100%" height="100%" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="4" y="14" width="24" height="12" rx="3" fill="#fffbe7" stroke="#d50000" stroke-width="2"/>
+                  <rect x="14" y="14" width="4" height="12" fill="#ffd600" stroke="#d50000" stroke-width="1.5"/>
+                  <rect x="6" y="8" width="20" height="8" rx="2.5" fill="#ffd600" stroke="#d50000" stroke-width="2"/>
+                  <path d="M16 8c-1.5-4-7-3-7 1.2 0 2.2 2.5 3.2 4.5 1.7" stroke="#d50000" stroke-width="1.5" fill="none"/>
+                  <path d="M16 8c1.5-4 7-3 7 1.2 0 2.2-2.5 3.2-4.5 1.7" stroke="#d50000" stroke-width="1.5" fill="none"/>
+                </svg>
+              </span>
+              Cadeau
+            </a>
         </div>
         <div style="text-align:center;margin:16px 0 0 0;display:flex;gap:10px;justify-content:center;align-items:center;">
             <button id="cashierModeBtn" style="background:#00e676;color:#fff;font-weight:bold;border:none;border-radius:6px;padding:6px 18px;cursor:pointer;box-shadow:0 1px 4px #bdbdbd;font-size:1em;transition:background 0.2s;">Cashier mode: uit</button>
@@ -37,6 +51,12 @@
             <div style="font-weight:bold;text-align:center;color:#1976d2;margin-bottom:6px;letter-spacing:1px;">Winkelmandje</div>
             <div id="cartItems"></div>
             <div id="cartTotal" style="font-weight:bold;text-align:right;margin-top:6px;"></div>
+            <div style="margin:10px 0 0 0;text-align:center;">
+                <input type="checkbox" id="notRobotCheckbox" style="transform:scale(1.2);margin-right:7px;vertical-align:middle;display:none;">
+                <label for="notRobotCheckbox" id="notRobotLabel" style="font-size:1em;vertical-align:middle;user-select:none;cursor:pointer;display:none;">Ik ben geen robot</label>
+                <span id="notRobotChallenge" style="font-size:1em;vertical-align:middle;"></span>
+                <input type="text" id="notRobotAnswer" style="width:60px;font-size:1em;margin-left:7px;text-align:center;" placeholder="?">
+            </div>
             <button id="clearCartBtn" style="margin:10px auto 0 auto;display:block;background:#ff1744;color:#fff;font-weight:bold;border:none;border-radius:6px;padding:6px 18px;cursor:pointer;box-shadow:0 1px 4px #bdbdbd;font-size:1em;">Leeg winkelmandje</button>
             <button id="buyCartBtn" style="margin:10px auto 0 auto;display:none;background:#00e676;color:#fff;font-weight:bold;border:none;border-radius:6px;padding:6px 18px;cursor:pointer;box-shadow:0 1px 4px #bdbdbd;font-size:1em;">Koop winkelmandje</button>
         </div>
@@ -71,12 +91,14 @@ h1 {
   margin-bottom: 8px;
 }
 .price-list {
-  margin: 16px 0 0 0;
+  margin: 16px auto 0 auto;
   border-radius: 12px;
   box-shadow: 0 2px 8px #ffd60033;
   background: #fffef8;
   padding: 8px 6px 8px 6px;
   border: 1px solid #ffe082;
+  max-width: 370px;
+  text-align: center;
 }
 .price-list-title {
   font-size: 1.18em;
@@ -88,7 +110,8 @@ h1 {
 .price-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 12px;
   padding: 4px 0;
   font-size: 1em;
 }
@@ -97,12 +120,14 @@ h1 {
   font-weight: bold;
   min-width: 48px;
   font-size: 1.08em;
+  text-align: right;
 }
 .item {
   flex: 1;
   margin-left: 6px;
   margin-right: 6px;
   font-size: 1em;
+  text-align: center;
 }
 .add-to-cart.animated-btn {
   background: #00e676;
@@ -179,5 +204,12 @@ h1 {
   }
 }
     </style>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('service-worker.js');
+    });
+  }
+</script>
 </body>
 </html>
