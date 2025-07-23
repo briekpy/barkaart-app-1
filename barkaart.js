@@ -1,3 +1,35 @@
+function scratchCoinsForAmount(amount) {
+    // Try to pay the exact amount using the highest coins first (greedy, perfect change)
+    let coins = coinValues.map((v, i) => ({ value: v, idx: i, used: localStorage.getItem('coin'+i) === '1' }));
+    coins = coins.filter(c => !c.used).sort((a, b) => b.value - a.value);
+    let remaining = amount;
+    let used = [];
+    for (let coin of coins) {
+        if (remaining >= coin.value - 0.001) { // allow for floating point error
+            localStorage.setItem('coin'+coin.idx, '1');
+            used.push(coin.idx);
+            remaining = +(remaining - coin.value).toFixed(2);
+            if (remaining <= 0.001) break;
+        }
+    }
+    // If we paid the exact amount, return
+    if (Math.abs(remaining) < 0.01) {
+        renderCoins();
+        return amount.toFixed(2);
+    } else {
+        // Undo if not exact
+        used.forEach(idx => localStorage.setItem('coin'+idx, '0'));
+        // fallback: scratch as much as possible (original fallback)
+        remaining = amount;
+        for (let coin of coins) {
+            if (remaining <= 0) break;
+            localStorage.setItem('coin'+coin.idx, '1');
+            remaining -= coin.value;
+        }
+        renderCoins();
+        return (amount - remaining).toFixed(2);
+    }
+}
 // Winkelmandje (shopping cart) logic
 let cart = JSON.parse(localStorage.getItem('barkaartCart') || '{}');
 
@@ -5,10 +37,12 @@ function updateCartUI() {
     const cartDiv = document.getElementById('cart');
     const cartItemsDiv = document.getElementById('cartItems');
     const cartTotalDiv = document.getElementById('cartTotal');
+    const buyCartBtn = document.getElementById('buyCartBtn');
     if (!cartDiv || !cartItemsDiv || !cartTotalDiv) return;
     const items = Object.entries(cart);
     if (items.length === 0) {
         cartDiv.style.display = 'none';
+        if (buyCartBtn) buyCartBtn.style.display = 'none';
         return;
     }
     cartDiv.style.display = 'block';
@@ -19,11 +53,12 @@ function updateCartUI() {
         row.style.display = 'flex';
         row.style.justifyContent = 'space-between';
         row.style.alignItems = 'center';
-        row.innerHTML = `<span>${obj.qty}x ${name}</span><span>€${(obj.price * obj.qty).toFixed(2)}</span> <button class="remove-from-cart" data-item="${name}">-</button>`;
+        row.innerHTML = `<span>${obj.qty}x ${name}</span><span>€${(obj.price * obj.qty).toFixed(2)}</span> <button class=\"remove-from-cart\" data-item=\"${name}\">-</button>`;
         cartItemsDiv.appendChild(row);
         total += obj.price * obj.qty;
     });
     cartTotalDiv.textContent = 'Totaal: €' + total.toFixed(2);
+    if (buyCartBtn) buyCartBtn.style.display = cashierMode ? 'block' : 'none';
 }
 
 function addToCart(item, price) {
@@ -67,6 +102,17 @@ window.addEventListener('DOMContentLoaded', () => {
         });
         const clearBtn = document.getElementById('clearCartBtn');
         if (clearBtn) clearBtn.onclick = clearCart;
+        const buyBtn = document.getElementById('buyCartBtn');
+        if (buyBtn) buyBtn.onclick = () => {
+            if (!cashierMode) return;
+            // Calculate total
+            let total = 0;
+            Object.values(cart).forEach(obj => { total += obj.price * obj.qty; });
+            if (total === 0) return;
+            const scratched = scratchCoinsForAmount(total);
+            showMessage('Winkelmandje gekocht! Betaald: €' + scratched);
+            clearCart();
+        };
     }
     updateCartUI();
 });
@@ -104,6 +150,15 @@ function updateCashierModeBtn() {
 window.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('cashierModeBtn');
     const changeCodeBtn = document.getElementById('changeCodeBtn');
+    const resetCoinsBtn = document.getElementById('resetCoinsBtn');
+    function updateChangeCodeBtnVisibility() {
+        if (changeCodeBtn) {
+            changeCodeBtn.style.display = cashierMode ? '' : 'none';
+        }
+        if (resetCoinsBtn) {
+            resetCoinsBtn.style.display = cashierMode ? '' : 'none';
+        }
+    }
     if (btn) {
         btn.onclick = () => {
             if (!cashierMode) {
@@ -114,16 +169,31 @@ window.addEventListener('DOMContentLoaded', () => {
                     showMessage('Foute code voor cashier mode!');
                     return;
                 }
+                // Auto reset coins and refresh page when cashier mode is turned on
+                resetCoins();
+                setTimeout(() => { location.reload(); }, 350);
             }
             cashierMode = !cashierMode;
             localStorage.setItem('cashierMode', cashierMode ? '1' : '0');
             updateCashierModeBtn();
-            if (changeCodeBtn) changeCodeBtn.disabled = !cashierMode;
+            updateChangeCodeBtnVisibility();
         };
         updateCashierModeBtn();
     }
+    if (resetCoinsBtn) {
+        resetCoinsBtn.onclick = () => {
+            if (!cashierMode) {
+                showMessage('Alleen in cashier mode kun je munten resetten!');
+                return;
+            }
+            if (confirm('Weet je zeker dat je alle munten wilt resetten?')) {
+                resetCoins();
+                showMessage('Alle munten zijn gereset!');
+            }
+        };
+    }
     if (changeCodeBtn) {
-        changeCodeBtn.disabled = !cashierMode;
+        updateChangeCodeBtnVisibility();
         changeCodeBtn.onclick = () => {
             if (!cashierMode) {
                 showMessage('Alleen in cashier mode kun je de code wijzigen!');
