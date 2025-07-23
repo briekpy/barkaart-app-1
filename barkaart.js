@@ -109,6 +109,13 @@ window.addEventListener('DOMContentLoaded', () => {
             let total = 0;
             Object.values(cart).forEach(obj => { total += obj.price * obj.qty; });
             if (total === 0) return;
+            // Check if enough money is available
+            let coins = coinValues.map((v, i) => ({ value: v, idx: i, used: localStorage.getItem('coin'+i) === '1' }));
+            let available = coins.filter(c => !c.used).reduce((sum, c) => sum + c.value, 0);
+            if (available < total - 0.001) {
+                showMessage('Koop een nieuwe kaart!', 3000, '#d32f2f');
+                return;
+            }
             const scratched = scratchCoinsForAmount(total);
             showMessage('Winkelmandje gekocht! Betaald: €' + scratched);
             clearCart();
@@ -130,21 +137,72 @@ function showMessage(msg, timeout = 2000) {
         setTimeout(() => { msgDiv.textContent = ''; }, timeout);
     }
 }
-// 5x €0.50, 5x €0.20, 10x €0.10, 10x €0.05
-const coinValues = [
-    ...Array(5).fill(0.50),
-    ...Array(5).fill(0.20),
-    ...Array(10).fill(0.10),
-    ...Array(10).fill(0.05)
-];
+// Card values
+const CARD_VALUES = [5, 10, 25];
+let selectedCardValue = parseFloat(localStorage.getItem('barkaartCardValue')) || 5;
+function getCoinValuesForCard(value) {
+    if (value === 5) {
+        return [
+            ...Array(5).fill(0.50),
+            ...Array(5).fill(0.20),
+            ...Array(10).fill(0.10),
+            ...Array(10).fill(0.05)
+        ];
+    } else if (value === 10) {
+        return [
+            ...Array(10).fill(0.50),
+            ...Array(10).fill(0.20),
+            ...Array(20).fill(0.10),
+            ...Array(20).fill(0.05)
+        ];
+    } else if (value === 25) {
+        return [
+            ...Array(25).fill(0.50),
+            ...Array(25).fill(0.20),
+            ...Array(50).fill(0.10),
+            ...Array(50).fill(0.05)
+        ];
+    }
+    return [];
+}
+let coinValues = getCoinValuesForCard(selectedCardValue);
 const coinGroupsDiv = document.getElementById('coinGroups');
 let cashierMode = localStorage.getItem('cashierMode') === '1';
+    // Card value select logic
+    const cardValueSelect = document.getElementById('cardValueSelect');
+    if (cardValueSelect) {
+        cardValueSelect.value = selectedCardValue;
+        // Only enable dropdown in cashier mode
+        cardValueSelect.disabled = !cashierMode;
+        cardValueSelect.onchange = () => {
+            if (!cashierMode) return; // Prevent change if not in cashier mode
+            selectedCardValue = parseFloat(cardValueSelect.value);
+            localStorage.setItem('barkaartCardValue', selectedCardValue);
+            coinValues = getCoinValuesForCard(selectedCardValue);
+            // Remove all coin usage
+            for (let i = 0; i < 200; ++i) localStorage.removeItem('coin'+i);
+            resetCoins();
+            renderCoins();
+            document.getElementById('totalValue').textContent = '€' + selectedCardValue.toFixed(2);
+            // Enable cashier mode when card value is changed
+            cashierMode = true;
+            localStorage.setItem('cashierMode', '1');
+            updateCashierModeUI();
+        };
+    }
+    // On load, update value display
+    document.getElementById('totalValue').textContent = '€' + selectedCardValue.toFixed(2);
 
 function updateCashierModeBtn() {
     const btn = document.getElementById('cashierModeBtn');
     if (!btn) return;
     btn.textContent = 'Cashier mode: ' + (cashierMode ? 'aan' : 'uit');
     btn.style.background = cashierMode ? '#ff1744' : '#00e676';
+    // Enable/disable card value select
+    const cardValueSelect = document.getElementById('cardValueSelect');
+    if (cardValueSelect) {
+        cardValueSelect.disabled = !cashierMode;
+    }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
